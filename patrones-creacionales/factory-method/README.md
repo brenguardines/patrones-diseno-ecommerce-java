@@ -4,33 +4,46 @@
 
 En un e-commerce, el sistema puede necesitar enviar notificaciones por distintos canales: email, WhatsApp o SMS.
 
-Si en cada parte del sistema creamos directamente las clases concretas con `new`, el código queda acoplado a esas implementaciones.
+Si en cada parte del sistema creamos directamente las clases concretas con `new`, el código queda acoplado a esas
+implementaciones.
 
 Por ejemplo, sin aplicar el patrón podríamos terminar repitiendo lógica como esta:
 
-``` java
-if (tipoNotificacion == TipoNotificacion.EMAIL) {
+```java
+CanalNotificacion canal = new NotificacionEmail();
+canal.enviar("bren@email.com","Tu pedido fue creado correctamente");
+```
+
+O también podríamos tener condicionales para decidir qué clase concreta instanciar:
+
+```java
+if(tipoNotificacion.equals("EMAIL")) {
     canal = new NotificacionEmail();
-} else if (tipoNotificacion == TipoNotificacion.WHATSAPP) {
+    } else if(tipoNotificacion.equals("WHATSAPP")) {
     canal = new NotificacionWhatsApp();
-} else if (tipoNotificacion == TipoNotificacion.SMS) {
+    } else if(tipoNotificacion.equals("SMS")) {
     canal = new NotificacionSms();
 }
 ```
 
-El problema de este enfoque es que el código cliente conoce demasiadas clases concretas y la lógica de creación puede quedar repetida en distintos lugares del sistema.
+El problema de este enfoque es que el código cliente conoce demasiadas clases concretas y la lógica de creación puede
+quedar repetida en distintos lugares del sistema.
 
 ## Solución
 
-Factory Method permite centralizar la creación de objetos en una fábrica.
+Factory Method permite delegar la creación de objetos a subclases creadoras.
 
-El código cliente pide un canal de notificación y trabaja con una interfaz común, sin preocuparse por qué clase concreta se instancia.
+En lugar de que el código cliente instancie directamente `NotificacionEmail`, `NotificacionWhatsApp`
+o `NotificacionSms`, se define una clase creadora base con un método factory.
 
-En este caso, el código cliente no necesita saber si está usando una notificación por email, WhatsApp o SMS. Solo necesita saber que tiene un objeto que cumple con la interfaz `CanalNotificacion`.
+Cada subclase creadora redefine ese método y decide qué canal concreto crear.
+
+De esta forma, el código cliente trabaja con una abstracción y no queda acoplado directamente a las clases concretas de
+notificación.
 
 ## Ejemplo en este proyecto
 
-Se define una interfaz común:
+Se define una interfaz común para todos los canales de notificación:
 
 ```java
 public interface CanalNotificacion {
@@ -38,22 +51,59 @@ public interface CanalNotificacion {
 }
 ```
 
-Luego se crean distintas implementaciones:
+Luego se crean distintas implementaciones concretas:
 
-- `NotificacionEmail`
-- `NotificacionWhatsApp`
-- `NotificacionSms`
+* `NotificacionEmail`
+* `NotificacionWhatsApp`
+* `NotificacionSms`
 
-La clase `NotificacionFactory` recibe un `TipoNotificacion` y devuelve el canal correspondiente.
+También se define una clase creadora abstracta:
 
 ```java
-public class NotificacionFactory {
-    public CanalNotificacion crearCanal(TipoNotificacion tipoNotificacion) {
-        return switch (tipoNotificacion) {
-            case EMAIL -> new NotificacionEmail();
-            case WHATSAPP -> new NotificacionWhatsApp();
-            case SMS -> new NotificacionSms();
-        };
+public abstract class CreadorNotificacion {
+
+    public void notificar(String destinatario, String mensaje) {
+        CanalNotificacion canal = crearCanal();
+        canal.enviar(destinatario, mensaje);
+    }
+
+    protected abstract CanalNotificacion crearCanal();
+}
+```
+
+El método `crearCanal()` es el Factory Method.
+
+La clase `CreadorNotificacion` define el flujo general para enviar una notificación, pero delega en las subclases la
+decisión de qué canal concreto crear.
+
+Después, cada creador concreto implementa el método factory:
+
+```java
+public class CreadorEmail extends CreadorNotificacion {
+
+    @Override
+    protected CanalNotificacion crearCanal() {
+        return new NotificacionEmail();
+    }
+}
+```
+
+```java
+public class CreadorWhatsApp extends CreadorNotificacion {
+
+    @Override
+    protected CanalNotificacion crearCanal() {
+        return new NotificacionWhatsApp();
+    }
+}
+```
+
+```java
+public class CreadorSms extends CreadorNotificacion {
+
+    @Override
+    protected CanalNotificacion crearCanal() {
+        return new NotificacionSms();
     }
 }
 ```
@@ -62,7 +112,25 @@ public class NotificacionFactory {
 
 ```mermaid
 classDiagram
-    direction LR
+    direction TB
+
+    class CreadorNotificacion {
+        <<abstract>>
+        +notificar(String destinatario, String mensaje)
+        #crearCanal() CanalNotificacion
+    }
+
+    class CreadorEmail {
+        #crearCanal() CanalNotificacion
+    }
+
+    class CreadorWhatsApp {
+        #crearCanal() CanalNotificacion
+    }
+
+    class CreadorSms {
+        #crearCanal() CanalNotificacion
+    }
 
     class CanalNotificacion {
         <<interface>>
@@ -81,45 +149,37 @@ classDiagram
         +enviar(String destinatario, String mensaje)
     }
 
-    class TipoNotificacion {
-        <<enumeration>>
-        EMAIL
-        WHATSAPP
-        SMS
-    }
-
-    class NotificacionFactory {
-        +crearCanal(TipoNotificacion tipoNotificacion) CanalNotificacion
-    }
-
+    CreadorNotificacion ..> CanalNotificacion
+    CreadorNotificacion <|-- CreadorEmail
+    CreadorNotificacion <|-- CreadorWhatsApp
+    CreadorNotificacion <|-- CreadorSms
     CanalNotificacion <|.. NotificacionEmail
     CanalNotificacion <|.. NotificacionWhatsApp
     CanalNotificacion <|.. NotificacionSms
-
-    NotificacionFactory ..> TipoNotificacion
-    NotificacionFactory ..> CanalNotificacion
 ```
 
-En este diagrama se puede ver que `NotificacionEmail`, `NotificacionWhatsApp` y `NotificacionSms` implementan la interfaz `CanalNotificacion`.
+En este diagrama se puede ver que `CreadorEmail`, `CreadorWhatsApp` y `CreadorSms` heredan de `CreadorNotificacion` y
+redefinen el método `crearCanal()`.
 
-La clase `NotificacionFactory` recibe un `TipoNotificacion` y devuelve un objeto del tipo `CanalNotificacion`, centralizando la creación de los distintos canales de notificación.
+También se puede ver que `NotificacionEmail`, `NotificacionWhatsApp` y `NotificacionSms` implementan la
+interfaz `CanalNotificacion`.
+
+Cada creador concreto decide qué implementación de `CanalNotificacion` crear. Por ejemplo, `CreadorEmail` devuelve una
+instancia de `NotificacionEmail`.
 
 ## Código principal
 
-El código cliente usa la fábrica para obtener un canal de notificación:
+El código cliente trabaja con la clase abstracta `CreadorNotificacion`, sin crear directamente las notificaciones
+concretas.
 
-``` java
-NotificacionFactory factory = new NotificacionFactory();
-
-CanalNotificacion canal = factory.crearCanal(TipoNotificacion.EMAIL);
-
-canal.enviar(
-        "bren@email.com",
-        "Tu pedido fue creado correctamente"
-);
+```java
+CreadorNotificacion creadorEmail = new CreadorEmail();
+creadorEmail.notificar("bren@email.com", "Tu pedido fue creado correctamente");
 ```
 
-La ventaja es que el código cliente trabaja contra la interfaz `CanalNotificacion`, no contra una clase concreta como `NotificacionEmail`.
+La ventaja es que el código cliente no instancia directamente `NotificacionEmail`.
+
+La creación del canal queda encapsulada dentro del método factory `crearCanal()`.
 
 ## Estructura del ejemplo
 
@@ -127,35 +187,43 @@ La ventaja es que el código cliente trabaja contra la interfaz `CanalNotificaci
 factorymethod/
 │
 ├── CanalNotificacion.java
+├── CreadorNotificacion.java
+├── CreadorEmail.java
+├── CreadorWhatsApp.java
+├── CreadorSms.java
 ├── FactoryMethodDemo.java
 ├── NotificacionEmail.java
-├── NotificacionFactory.java
 ├── NotificacionSms.java
-├── NotificacionWhatsApp.java
-└── TipoNotificacion.java
+└── NotificacionWhatsApp.java
 ```
 
 ## Cuándo usar Factory Method
 
 Conviene usar este patrón cuando:
 
-- Existen varias clases que implementan una misma interfaz.
-- La creación del objeto depende de una condición, configuración o tipo.
-- Se quiere evitar repetir `new` y lógica condicional en distintas partes del sistema.
-- Se busca reducir el acoplamiento entre el código cliente y las clases concretas.
+* Existen varias clases que implementan una misma interfaz.
+* Queremos delegar la creación de objetos a subclases.
+* El código cliente no debería depender directamente de clases concretas.
+* Se busca reducir el acoplamiento entre el código que usa un objeto y el código que lo crea.
+* Se quiere respetar mejor el principio abierto/cerrado, permitiendo agregar nuevas variantes sin modificar la lógica
+  principal.
 
 ## Cuándo no usarlo
 
 No conviene aplicarlo si:
 
-- Solo existe una implementación concreta.
-- La creación del objeto es muy simple y no hay variaciones.
-- Agrega más complejidad de la necesaria para el problema actual.
+* Solo existe una implementación concreta.
+* La creación del objeto es muy simple y no hay variaciones.
+* Agrega más clases sin aportar flexibilidad real.
+* Una fábrica simple alcanza para resolver el problema sin necesidad de herencia.
 
 ## Resumen
 
-Factory Method es un patrón creacional que permite crear objetos sin acoplar el código cliente a clases concretas.
+Factory Method es un patrón creacional que permite delegar la creación de objetos a subclases creadoras.
 
-En este ejemplo, el e-commerce puede enviar notificaciones por distintos canales. En lugar de que el código cliente decida manualmente qué clase instanciar, esa responsabilidad queda centralizada en `NotificacionFactory`.
+En este ejemplo, el e-commerce puede enviar notificaciones por distintos canales. La clase
+abstracta `CreadorNotificacion` define el flujo general para notificar, pero deja que cada subclase concreta decida qué
+canal crear.
 
-Esto hace que el código sea más flexible, más fácil de mantener y más simple de extender si en el futuro se agrega un nuevo canal, como notificaciones push.
+De esta forma, el código queda más flexible, menos acoplado a clases concretas y más fácil de extender si en el futuro
+se agrega un nuevo canal, como notificaciones push.
