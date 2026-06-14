@@ -197,6 +197,11 @@ factorymethod/
 └── NotificacionWhatsApp.java
 ```
 
+## Código fuente
+
+El código completo del ejemplo se encuentra en:
+[Ver código de Factory Method](../../src/main/java/com/bren/patrones/creacionales/factorymethod)
+
 ## Cuándo usar Factory Method
 
 Conviene usar este patrón cuando:
