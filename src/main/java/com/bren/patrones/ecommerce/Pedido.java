@@ -10,14 +10,40 @@ public class Pedido {
     private List<Producto> productos;
     private EstadoPedido estadoPedido;
     private MetodoDePago metodoDePago;
+    private String direccionEnvio;
+    private String cuponDescuento;
+    private String observaciones;
+    private boolean envioExpress;
 
-    public Pedido(Long id, Cliente cliente, MetodoDePago metodoPago) {
+    public Pedido(Long id, Cliente cliente, MetodoDePago metodoDePago) {
+        this(
+                id,
+                cliente,
+                new ArrayList<>(),
+                metodoDePago,
+                null,
+                null,
+                null,
+                false
+        );
+    }
+
+    public Pedido(Long id, Cliente cliente, List<Producto> productos, MetodoDePago metodoDePago, String direccionEnvio, String cuponDescuento, String observaciones, boolean envioExpress) {
         this.id = id;
         this.cliente = cliente;
-        this.metodoDePago = metodoPago;
+        this.metodoDePago = metodoDePago;
         this.estadoPedido = EstadoPedido.CREADO;
         this.productos = new ArrayList<>();
+        this.direccionEnvio = direccionEnvio;
+        this.cuponDescuento = cuponDescuento;
+        this.observaciones = observaciones;
+        this.envioExpress = envioExpress;
+
+        if (productos != null) {
+            productos.forEach(this::agregarProducto);
+        }
     }
+
 
     public Long getId() {
         return id;
@@ -28,7 +54,7 @@ public class Pedido {
     }
 
     public List<Producto> getProductos() {
-        return productos;
+        return List.copyOf(productos);
     }
 
     public EstadoPedido getEstadoPedido() {
@@ -39,7 +65,27 @@ public class Pedido {
         return metodoDePago;
     }
 
+    public String getDireccionEnvio() {
+        return direccionEnvio;
+    }
+
+    public String getCuponDescuento() {
+        return cuponDescuento;
+    }
+
+    public String getObservaciones() {
+        return observaciones;
+    }
+
+    public boolean isEnvioExpress() {
+        return envioExpress;
+    }
+
     public void agregarProducto(Producto producto) {
+        if (producto == null) {
+            throw new IllegalStateException("El producto no puede ser nulo");
+        }
+
         if (!producto.tieneStock()) {
             throw new IllegalStateException("El producto no tiene stock disponible");
         }
@@ -94,6 +140,10 @@ public class Pedido {
                 ", estadoPedido=" + estadoPedido +
                 ", metodoDePago=" + metodoDePago +
                 ", total=" + calcularTotal() +
+                ", direccionEnvio='" + direccionEnvio + '\'' +
+                ", cuponDescuento='" + cuponDescuento + '\'' +
+                ", observaciones='" + observaciones + '\'' +
+                ", envioExpress=" + envioExpress +
                 '}';
     }
 }
