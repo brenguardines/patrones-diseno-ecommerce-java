@@ -1,9 +1,9 @@
 package com.bren.patrones;
 
-import com.bren.patrones.creacionales.builder.BuilderDemo;
+import com.bren.patrones.estructurales.adapter.AdapterDemo;
 
 public class Main {
     public static void main(String[] args) {
-        BuilderDemo.ejecutar();
+        AdapterDemo.ejecutar();
     }
 }
