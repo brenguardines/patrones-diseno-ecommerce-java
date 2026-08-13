@@ -1,5 +1,7 @@
 package com.bren.patrones.ecommerce;
 
+import com.bren.patrones.comportamiento.observer.ObservadorPedido;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +16,8 @@ public class Pedido {
     private String cuponDescuento;
     private String observaciones;
     private boolean envioExpress;
+
+    private final List<ObservadorPedido> observadores = new ArrayList<>();
 
     public Pedido(Long id, Cliente cliente, MetodoDePago metodoDePago) {
         this(
@@ -105,6 +109,7 @@ public class Pedido {
         }
 
         this.estadoPedido = EstadoPedido.PAGADO;
+        notificarObservadores();
     }
 
     public void enviar() {
@@ -113,6 +118,7 @@ public class Pedido {
         }
 
         this.estadoPedido = EstadoPedido.ENVIADO;
+        notificarObservadores();
     }
 
     public void entregar() {
@@ -121,6 +127,7 @@ public class Pedido {
         }
 
         this.estadoPedido = EstadoPedido.ENTREGADO;
+        notificarObservadores();
     }
 
     public void cancelar() {
@@ -129,6 +136,7 @@ public class Pedido {
         }
 
         this.estadoPedido = EstadoPedido.CANCELADO;
+        notificarObservadores();
     }
 
     @Override
@@ -145,5 +153,21 @@ public class Pedido {
                 ", observaciones='" + observaciones + '\'' +
                 ", envioExpress=" + envioExpress +
                 '}';
+    }
+
+    public void agregarObservador(ObservadorPedido observador) {
+        if (observador == null) {
+            throw new IllegalArgumentException("El observador no puede ser nulo");
+        }
+
+        observadores.add(observador);
+    }
+
+    public void eliminarObservador(ObservadorPedido observador) {
+        observadores.remove(observador);
+    }
+
+    private void notificarObservadores() {
+        observadores.forEach(observador -> observador.actualizar(this));
     }
 }
