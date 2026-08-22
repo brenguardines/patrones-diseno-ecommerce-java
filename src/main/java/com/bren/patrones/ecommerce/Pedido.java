@@ -1,6 +1,8 @@
 package com.bren.patrones.ecommerce;
 
 import com.bren.patrones.comportamiento.observer.ObservadorPedido;
+import com.bren.patrones.comportamiento.state.EstadoCreado;
+import com.bren.patrones.comportamiento.state.EstadoPedidoState;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -10,7 +12,7 @@ public class Pedido {
     private Long id;
     private Cliente cliente;
     private List<Producto> productos;
-    private EstadoPedido estadoPedido;
+    private EstadoPedidoState estadoPedido;
     private MetodoDePago metodoDePago;
     private String direccionEnvio;
     private String cuponDescuento;
@@ -36,7 +38,7 @@ public class Pedido {
         this.id = id;
         this.cliente = cliente;
         this.metodoDePago = metodoDePago;
-        this.estadoPedido = EstadoPedido.CREADO;
+        this.estadoPedido = new EstadoCreado();
         this.productos = new ArrayList<>();
         this.direccionEnvio = direccionEnvio;
         this.cuponDescuento = cuponDescuento;
@@ -62,7 +64,7 @@ public class Pedido {
     }
 
     public EstadoPedido getEstadoPedido() {
-        return estadoPedido;
+        return estadoPedido.getEstado();
     }
 
     public MetodoDePago getMetodoDePago() {
@@ -104,39 +106,19 @@ public class Pedido {
     }
 
     public void pagar() {
-        if (estadoPedido != EstadoPedido.CREADO) {
-            throw new IllegalStateException("Solo se puede pagar un pedido creado");
-        }
-
-        this.estadoPedido = EstadoPedido.PAGADO;
-        notificarObservadores();
+        cambiarEstado(estadoPedido.pagar());
     }
 
     public void enviar() {
-        if (estadoPedido != EstadoPedido.PAGADO) {
-            throw new IllegalStateException("Solo se puede enviar un pedido pagado");
-        }
-
-        this.estadoPedido = EstadoPedido.ENVIADO;
-        notificarObservadores();
+        cambiarEstado(estadoPedido.enviar());
     }
 
     public void entregar() {
-        if (estadoPedido != EstadoPedido.ENVIADO) {
-            throw new IllegalStateException("Solo se puede entregar un pedido enviado");
-        }
-
-        this.estadoPedido = EstadoPedido.ENTREGADO;
-        notificarObservadores();
+        cambiarEstado(estadoPedido.entregar());
     }
 
     public void cancelar() {
-        if (estadoPedido == EstadoPedido.ENTREGADO) {
-            throw new IllegalStateException("No se puede cancelar un pedido entregado");
-        }
-
-        this.estadoPedido = EstadoPedido.CANCELADO;
-        notificarObservadores();
+        cambiarEstado(estadoPedido.cancelar());
     }
 
     @Override
@@ -169,5 +151,10 @@ public class Pedido {
 
     private void notificarObservadores() {
         observadores.forEach(observador -> observador.actualizar(this));
+    }
+
+    private void cambiarEstado(EstadoPedidoState nuevoEstado) {
+        this.estadoPedido = nuevoEstado;
+        notificarObservadores();
     }
 }
