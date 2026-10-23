@@ -1,10 +1,10 @@
 package com.bren.patrones;
 
 
-import com.bren.patrones.estructurales.facade.FacadeDemo;
+import com.bren.patrones.comportamiento.command.CommandDemo;
 
 public class Main {
     public static void main(String[] args) {
-        FacadeDemo.ejecutar();
+        CommandDemo.ejecutar();
     }
 }
